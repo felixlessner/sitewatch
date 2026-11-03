@@ -1,0 +1,54 @@
+databases:
+  - name: berendsohn-monitoring-db
+    plan: basic-256mb
+    region: frankfurt
+    databaseName: sitewatch
+    user: sitewatch
+services:
+  - type: web
+    name: berendsohn-monitoring-web
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: berendsohn-monitoring-db
+          property: connectionString
+      - key: APP_ORIGIN
+        value: https://monitoring.berendsohn.com
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+  - type: cron
+    name: berendsohn-monitoring-checks
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    schedule: "*/5 * * * *"
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python monitor.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: berendsohn-monitoring-db
+          property: connectionString
+      - key: EMAIL_ENABLED
+        value: "false"
+      - key: SMTP_HOST
+        value: mail.your-server.de
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: do-not-reply@berendsohn-digital.de
+      - key: SMTP_FROM
+        value: do-not-reply@berendsohn-digital.de
+      - key: ALERT_TO
+        value: digital-service@berendsohn.com
+      - key: APP_ORIGIN
+        value: https://monitoring.berendsohn.com
+      - key: SMTP_PASSWORD
+        sync: false
